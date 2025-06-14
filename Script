@@ -1,181 +1,84 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
-
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
-local aimbotEnabled = false
-local fov = 120
-local walkspeedTarget = 80
+local ESP_ENABLED = true
+local AIMBOT_ENABLED = false
+local FOV_RADIUS = 120
+local WALKSPEED_VALUE = 30
 
-local teamColors = {
-	Criminal = Color3.fromRGB(255, 0, 0),
-	Police = Color3.fromRGB(0, 100, 255),
-	Prisoner = Color3.fromRGB(255, 140, 0)
-}
+local teleporting = false
+local noclipEnabled = false
+local noclipConnection
 
-local lastTeams = {}
+local FOV_Circle = Drawing.new("Circle")
+FOV_Circle.Radius = FOV_RADIUS
+FOV_Circle.Thickness = 2
+FOV_Circle.Color = Color3.fromRGB(255, 255, 255)
+FOV_Circle.Filled = false
+FOV_Circle.Visible = true
 
--- UI
-local screenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
-screenGui.ResetOnSpawn = false
+local espTable = {}
 
-local notificationLabel = Instance.new("TextLabel", screenGui)
-notificationLabel.Size = UDim2.new(1, 0, 0, 40)
-notificationLabel.Position = UDim2.new(0, 0, 0, 0)
-notificationLabel.BackgroundTransparency = 1
-notificationLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-notificationLabel.TextStrokeTransparency = 0.5
-notificationLabel.TextScaled = true
-notificationLabel.Font = Enum.Font.SourceSansBold
-notificationLabel.Text = ""
-notificationLabel.Visible = false
+function createESP(player)
+	if player == LocalPlayer or espTable[player] then return end
 
-local aimbotStatus = Instance.new("TextLabel", screenGui)
-aimbotStatus.Size = UDim2.new(0, 200, 0, 40)
-aimbotStatus.Position = UDim2.new(0.5, -100, 1, -45)
-aimbotStatus.BackgroundTransparency = 1
-aimbotStatus.TextColor3 = Color3.fromRGB(255, 255, 255)
-aimbotStatus.TextStrokeTransparency = 0.5
-aimbotStatus.TextScaled = true
-aimbotStatus.Font = Enum.Font.SourceSansBold
-aimbotStatus.Text = "Aimbot: OFF"
+	local highlight = Instance.new("Highlight")
+	highlight.Adornee = nil
+	highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+	highlight.FillTransparency = 0.5
+	highlight.OutlineTransparency = 0
+	highlight.Parent = game.CoreGui
+	highlight.FillColor = Color3.new(1,1,1)
 
-local function showNotification(text)
-	notificationLabel.Text = text
-	notificationLabel.Visible = true
-	task.delay(2.5, function()
-		notificationLabel.Visible = false
-	end)
+	local tag = Drawing.new("Text")
+	tag.Size = 14
+	tag.Center = true
+	tag.Outline = true
+	tag.Font = 2
+	tag.Visible = false
+
+	local line = Drawing.new("Line")
+	line.Thickness = 1
+	line.Color = Color3.new(1,1,1)
+	line.Visible = false
+
+	local box = Drawing.new("Square")
+	box.Thickness = 1
+	box.Color = Color3.new(1,1,1)
+	box.Filled = false
+	box.Visible = false
+
+	espTable[player] = {
+		Highlight = highlight,
+		Tag = tag,
+		Line = line,
+		Box = box
+	}
 end
 
-local function updateAimbotStatus()
-	aimbotStatus.Text = "Aimbot: " .. (aimbotEnabled and "ON" or "OFF")
-end
-
-local function setWalkSpeed()
-	local char = LocalPlayer.Character
-	if char then
-		local hum = char:FindFirstChildOfClass("Humanoid")
-		if hum and hum.WalkSpeed ~= walkspeedTarget then
-			hum.WalkSpeed = walkspeedTarget
+function removeESP(player)
+	if espTable[player] then
+		for _, v in pairs(espTable[player]) do
+			if typeof(v) == "Instance" then v:Destroy() else v:Remove() end
 		end
+		espTable[player] = nil
 	end
 end
 
-LocalPlayer.CharacterAdded:Connect(function()
-	repeat task.wait() until LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-	setWalkSpeed()
-end)
-
-task.spawn(function()
-	while true do
-		setWalkSpeed()
-		task.wait(0.1)
-	end
-end)
-
-local function tagPlayer(player)
-	if player == LocalPlayer then return end
-	local char = player.Character
-	if not char then return end
-	local hrp = char:FindFirstChild("HumanoidRootPart")
-	local head = char:FindFirstChild("Head")
-	if not hrp or not head then return end
-
-	if not char:FindFirstChild("AimbotTag") then
-		local tag = Instance.new("Folder", char)
-		tag.Name = "AimbotTag"
-
-		local highlight = Instance.new("Highlight", tag)
-		highlight.FillColor = teamColors[player.Team and player.Team.Name or "Prisoner"] or Color3.new(1, 1, 1)
-		highlight.OutlineTransparency = 1
-		highlight.Adornee = char
-
-		local billboard = Instance.new("BillboardGui", tag)
-		billboard.Size = UDim2.new(0, 50, 0, 50)
-		billboard.AlwaysOnTop = true
-		billboard.Adornee = hrp
-
-		local frame = Instance.new("Frame", billboard)
-		frame.Size = UDim2.new(1, 0, 1, 0)
-		frame.BackgroundColor3 = Color3.new(1, 1, 1)
-		frame.BackgroundTransparency = 0.5
-		frame.BorderSizePixel = 0
-
-		local nametag = Instance.new("BillboardGui", tag)
-		nametag.Size = UDim2.new(0, 200, 0, 50)
-		nametag.StudsOffset = Vector3.new(0, 3, 0)
-		nametag.AlwaysOnTop = true
-		nametag.Adornee = head
-
-		local label = Instance.new("TextLabel", nametag)
-		label.Size = UDim2.new(1, 0, 1, 0)
-		label.BackgroundTransparency = 1
-		label.Text = player.Name
-		label.TextColor3 = highlight.FillColor
-		label.TextStrokeTransparency = 0.5
-		label.TextScaled = true
-		label.Font = Enum.Font.SourceSansBold
-	end
-end
-
-task.spawn(function()
-	while true do
-		for _, player in ipairs(Players:GetPlayers()) do
-			pcall(function()
-				if player.Character then
-					tagPlayer(player)
-				end
-			end)
-		end
-		task.wait(1)
-	end
-end)
-
-task.spawn(function()
-	while true do
-		for _, player in ipairs(Players:GetPlayers()) do
-			if player ~= LocalPlayer and player.Character then
-				local tag = player.Character:FindFirstChild("AimbotTag")
-				if tag then
-					local currentTeam = player.Team
-					local newColor = teamColors[currentTeam and currentTeam.Name or "Prisoner"] or Color3.new(1, 1, 1)
-					if lastTeams[player] ~= currentTeam or tag:FindFirstChild("Highlight").FillColor ~= newColor then
-						tag:FindFirstChild("Highlight").FillColor = newColor
-						local nameGui = tag:FindFirstChildWhichIsA("BillboardGui")
-						if nameGui and nameGui:FindFirstChildOfClass("TextLabel") then
-							nameGui:FindFirstChildOfClass("TextLabel").TextColor3 = newColor
-						end
-
-						if lastTeams[player] and lastTeams[player].Name == "Prisoner" and currentTeam and currentTeam.Name == "Criminal" then
-							showNotification("Prisoner: " .. player.Name .. " Changed To Criminal")
-						end
-
-						lastTeams[player] = currentTeam
-					end
-				end
-			end
-		end
-		task.wait(0.5)
-	end
-end)
-
-local function getTarget()
-	local closest = nil
-	local minDist = fov
-	for _, player in ipairs(Players:GetPlayers()) do
-		if player ~= LocalPlayer and player.Team ~= LocalPlayer.Team and player.Character then
-			local head = player.Character:FindFirstChild("Head")
-			if head then
-				local screenPos, onScreen = Camera:WorldToViewportPoint(head.Position)
-				if onScreen then
-					local dist = (Vector2.new(screenPos.X, screenPos.Y) - Camera.ViewportSize / 2).Magnitude
-					if dist < minDist then
-						minDist = dist
-						closest = head
-					end
+function getClosestPlayer()
+	local closest, shortestDist = nil, math.huge
+	for _, player in pairs(Players:GetPlayers()) do
+		if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
+			local pos, onScreen = Camera:WorldToViewportPoint(player.Character.Head.Position)
+			if onScreen then
+				local mousePos = UserInputService:GetMouseLocation()
+				local dist = (Vector2.new(pos.X, pos.Y) - Vector2.new(mousePos.X, mousePos.Y)).Magnitude
+				if dist < FOV_RADIUS and dist < shortestDist then
+					shortestDist = dist
+					closest = player
 				end
 			end
 		end
@@ -183,30 +86,264 @@ local function getTarget()
 	return closest
 end
 
+function aimAt(target)
+	if target and target.Character and target.Character:FindFirstChild("Head") then
+		local headPos = target.Character.Head.Position
+		Camera.CFrame = CFrame.new(Camera.CFrame.Position, headPos)
+	end
+end
+
+function smoothTeleportTo(targetPlayer)
+	if teleporting then return end
+	teleporting = true
+
+	local character = LocalPlayer.Character
+	local targetChar = targetPlayer.Character
+	if not (character and character:FindFirstChild("HumanoidRootPart")) then teleporting = false return end
+	if not (targetChar and targetChar:FindFirstChild("HumanoidRootPart")) then teleporting = false return end
+
+	local hrp = character.HumanoidRootPart
+	local targetPos = targetChar.HumanoidRootPart.Position
+
+	for i = 1, 100 do
+		hrp.CFrame = hrp.CFrame + Vector3.new(0, 2, 0)
+		task.wait(0.01)
+	end
+
+	local startPos = hrp.Position
+	local height = 300
+	local flightSteps = 150
+	for i = 1, flightSteps do
+		local t = i / flightSteps
+		local curve = Vector3.new(
+			startPos.X + (targetPos.X - startPos.X) * t,
+			startPos.Y + (targetPos.Y + height - startPos.Y) * t,
+			startPos.Z + (targetPos.Z - startPos.Z) * t
+		)
+		hrp.CFrame = CFrame.new(curve)
+		task.wait(0.015)
+	end
+
+	for i = 1, 70 do
+		hrp.CFrame = hrp.CFrame - Vector3.new(0, 4, 0)
+		task.wait(0.01)
+	end
+
+	teleporting = false
+end
+
+function enableNoclip()
+	noclipConnection = RunService.Stepped:Connect(function()
+		local character = LocalPlayer.Character
+		if character then
+			for _, part in pairs(character:GetChildren()) do
+				if part:IsA("BasePart") then
+					part.CanCollide = false
+				end
+			end
+		end
+	end)
+end
+
+function disableNoclip()
+	if noclipConnection then
+		noclipConnection:Disconnect()
+		noclipConnection = nil
+	end
+
+	local character = LocalPlayer.Character
+	if character then
+		for _, part in pairs(character:GetChildren()) do
+			if part:IsA("BasePart") then
+				part.CanCollide = true
+			end
+		end
+	end
+end
+
+function toggleNoclip()
+	noclipEnabled = not noclipEnabled
+	if noclipEnabled then
+		enableNoclip()
+		toggleNoclipButton.Text = "Noclip: ON"
+	else
+		disableNoclip()
+		toggleNoclipButton.Text = "Noclip: OFF"
+	end
+end
+
+local screenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
+screenGui.Name = "ESPMenu"
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 300, 0, 400)
+frame.Position = UDim2.new(1, -320, 0.35, 0)
+frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+frame.BorderSizePixel = 0
+frame.Active = false
+frame.Parent = screenGui
+
+local uiList = Instance.new("UIListLayout", frame)
+uiList.SortOrder = Enum.SortOrder.LayoutOrder
+uiList.Padding = UDim.new(0, 4)
+
+local toggleNoclipButton = Instance.new("TextButton")
+toggleNoclipButton.Size = UDim2.new(0, 120, 0, 30)
+toggleNoclipButton.Position = UDim2.new(1, -140, 0, 20)
+toggleNoclipButton.Text = "Noclip: OFF"
+toggleNoclipButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+toggleNoclipButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleNoclipButton.Font = Enum.Font.SourceSans
+toggleNoclipButton.TextSize = 16
+toggleNoclipButton.Parent = screenGui
+
+toggleNoclipButton.MouseButton1Click:Connect(toggleNoclip)
+
+local hideMenu = false
+UserInputService.InputBegan:Connect(function(input, gp)
+	if not gp and input.KeyCode == Enum.KeyCode.J then
+		hideMenu = not hideMenu
+		screenGui.Enabled = not hideMenu
+	end
+end)
+
+local selectedTeleportPlayer = nil
+
+local function createPlayerButton(player)
+	local button = Instance.new("TextButton")
+	button.Size = UDim2.new(1, -10, 0, 30)
+	button.Text = player.Name
+	button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+	button.TextColor3 = Color3.fromRGB(255, 255, 255)
+	button.Font = Enum.Font.SourceSans
+	button.TextSize = 16
+	button.Parent = frame
+
+	button.MouseButton1Click:Connect(function()
+		if AIMBOT_ENABLED then
+			button.Text = "Wyłącz najpierw Aimbot!"
+			task.delay(1.5, function() button.Text = player.Name end)
+			return
+		end
+		selectedTeleportPlayer = player
+		smoothTeleportTo(player)
+	end)
+end
+
+local function refreshPlayerList()
+	for _, child in pairs(frame:GetChildren()) do
+		if child:IsA("TextButton") then
+			child:Destroy()
+		end
+	end
+
+	for _, player in ipairs(Players:GetPlayers()) do
+		if player ~= LocalPlayer then
+			createPlayerButton(player)
+		end
+	end
+end
+
+refreshPlayerList()
+
+Players.PlayerAdded:Connect(refreshPlayerList)
+Players.PlayerRemoving:Connect(refreshPlayerList)
+
 RunService.RenderStepped:Connect(function()
-	Camera.FieldOfView = fov
-	if aimbotEnabled then
-		local target = getTarget()
+	local mousePos = UserInputService:GetMouseLocation()
+	FOV_Circle.Position = Vector2.new(mousePos.X, mousePos.Y)
+
+	local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		humanoid.WalkSpeed = WALKSPEED_VALUE
+	end
+
+	for player, data in pairs(espTable) do
+		if player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+			local hrp = player.Character.HumanoidRootPart
+			local head = player.Character:FindFirstChild("Head")
+			local pos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
+
+			if onScreen then
+				local distance = math.floor((hrp.Position - Camera.CFrame.Position).Magnitude)
+				data.Tag.Text = player.Name .. " [" .. distance .. "m]"
+				data.Tag.Position = Vector2.new(pos.X, pos.Y - 20)
+				data.Tag.Visible = true
+
+				data.Line.From = Vector2.new(mousePos.X, mousePos.Y)
+				data.Line.To = Vector2.new(pos.X, pos.Y)
+				data.Line.Visible = true
+
+				local headPos, onScr1 = Camera:WorldToViewportPoint(head.Position)
+				local leg = player.Character:FindFirstChild("LeftFoot") or player.Character:FindFirstChild("LowerTorso") or hrp
+				local legPos, onScr2 = Camera:WorldToViewportPoint(leg.Position)
+				if onScr1 and onScr2 then
+					local size = Vector2.new(50, 70)
+					local boxPos = Vector2.new(headPos.X - size.X / 2, headPos.Y - size.Y / 2)
+
+					data.Box.Position = boxPos
+					data.Box.Size = size
+					data.Box.Visible = true
+
+					data.Highlight.Adornee = player.Character
+					data.Highlight.Enabled = ESP_ENABLED
+				else
+					data.Box.Visible = false
+					data.Highlight.Enabled = false
+				end
+
+				local team = player.Team and player.Team.Name or "Neutral"
+				if team == "Police" then
+					data.Highlight.FillColor = Color3.fromRGB(0, 100, 255)
+					data.Line.Color = Color3.fromRGB(0, 100, 255)
+					data.Tag.Color = Color3.fromRGB(0, 100, 255)
+					data.Box.Color = Color3.fromRGB(0, 100, 255)
+				elseif team == "Criminal" then
+					data.Highlight.FillColor = Color3.fromRGB(255, 0, 0)
+					data.Line.Color = Color3.fromRGB(255, 0, 0)
+					data.Tag.Color = Color3.fromRGB(255, 0, 0)
+					data.Box.Color = Color3.fromRGB(255, 0, 0)
+				else
+					data.Highlight.FillColor = Color3.fromRGB(255, 255, 255)
+					data.Line.Color = Color3.fromRGB(255, 255, 255)
+					data.Tag.Color = Color3.fromRGB(255, 255, 255)
+					data.Box.Color = Color3.fromRGB(255, 255, 255)
+				end
+			else
+				data.Tag.Visible = false
+				data.Line.Visible = false
+				data.Box.Visible = false
+				data.Highlight.Enabled = false
+			end
+		else
+			removeESP(player)
+		end
+	end
+
+	if AIMBOT_ENABLED then
+		local target = getClosestPlayer()
 		if target then
-			Camera.CFrame = CFrame.new(Camera.CFrame.Position, target.Position)
+			aimAt(target)
 		end
 	end
 end)
 
-UserInputService.InputBegan:Connect(function(input, processed)
-	if not processed and input.KeyCode == Enum.KeyCode.H then
-		aimbotEnabled = not aimbotEnabled
-		updateAimbotStatus()
-	end
+Players.PlayerAdded:Connect(function(player)
+	player.CharacterAdded:Connect(function()
+		wait(1)
+		createESP(player)
+	end)
+	createESP(player)
 end)
 
-LocalPlayer.Chatted:Connect(function(msg)
-	local cmd, arg = msg:match("^/(%w+)%s*(%d*)$")
-	if cmd == "fov" and tonumber(arg) then
-		fov = tonumber(arg)
-	elseif cmd == "ws" and tonumber(arg) then
-		walkspeedTarget = tonumber(arg)
+Players.PlayerRemoving:Connect(removeESP)
+
+for _, player in pairs(Players:GetPlayers()) do
+	createESP(player)
+end
+
+UserInputService.InputBegan:Connect(function(input, gp)
+	if not gp and input.KeyCode == Enum.KeyCode.H then
+		AIMBOT_ENABLED = not AIMBOT_ENABLED
 	end
 end)
-
-updateAimbotStatus()
