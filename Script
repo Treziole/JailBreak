@@ -8,10 +8,8 @@ local ESP_ENABLED = true
 local AIMBOT_ENABLED = false
 local FOV_RADIUS = 120
 local WALKSPEED_VALUE = 30
-
 local teleporting = false
 local noclipEnabled = false
-local noclipConnection
 
 local FOV_Circle = Drawing.new("Circle")
 FOV_Circle.Radius = FOV_RADIUS
@@ -22,226 +20,195 @@ FOV_Circle.Visible = true
 
 local espTable = {}
 
+function getTeamColor(player)
+    local teamName = player.Team and player.Team.Name or "Neutral"
+    teamName = string.lower(teamName)
+    if teamName == "police" then
+        return Color3.fromRGB(0, 100, 255)
+    elseif teamName == "criminal" then
+        return Color3.fromRGB(255, 0, 0)
+    else
+        return Color3.fromRGB(255, 255, 255)
+    end
+end
+
 function createESP(player)
-	if player == LocalPlayer or espTable[player] then return end
+    if player == LocalPlayer then return end
+    if espTable[player] then return end
 
-	local highlight = Instance.new("Highlight")
-	highlight.Adornee = nil
-	highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-	highlight.FillTransparency = 0.5
-	highlight.OutlineTransparency = 0
-	highlight.Parent = game.CoreGui
-	highlight.FillColor = Color3.new(1,1,1)
+    local highlight = Instance.new("Highlight")
+    highlight.Adornee = nil
+    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    highlight.FillTransparency = 0.5
+    highlight.OutlineTransparency = 0
+    highlight.Parent = game.CoreGui
+    highlight.FillColor = Color3.new(1, 1, 1)
 
-	local tag = Drawing.new("Text")
-	tag.Size = 14
-	tag.Center = true
-	tag.Outline = true
-	tag.Font = 2
-	tag.Visible = false
+    local tag = Drawing.new("Text")
+    tag.Size = 14
+    tag.Center = true
+    tag.Outline = true
+    tag.Font = 2
+    tag.Visible = false
 
-	local line = Drawing.new("Line")
-	line.Thickness = 1
-	line.Color = Color3.new(1,1,1)
-	line.Visible = false
+    local line = Drawing.new("Line")
+    line.Thickness = 1
+    line.Color = Color3.new(1, 1, 1)
+    line.Visible = false
 
-	local box = Drawing.new("Square")
-	box.Thickness = 1
-	box.Color = Color3.new(1,1,1)
-	box.Filled = false
-	box.Visible = false
+    local box = Drawing.new("Square")
+    box.Thickness = 1
+    box.Color = Color3.new(1, 1, 1)
+    box.Filled = false
+    box.Visible = false
 
-	espTable[player] = {
-		Highlight = highlight,
-		Tag = tag,
-		Line = line,
-		Box = box
-	}
+    espTable[player] = {
+        Highlight = highlight,
+        Tag = tag,
+        Line = line,
+        Box = box
+    }
 end
 
 function removeESP(player)
-	if espTable[player] then
-		for _, v in pairs(espTable[player]) do
-			if typeof(v) == "Instance" then v:Destroy() else v:Remove() end
-		end
-		espTable[player] = nil
-	end
+    if espTable[player] then
+        for _, v in pairs(espTable[player]) do
+            if typeof(v) == "Instance" then v:Destroy() else v:Remove() end
+        end
+        espTable[player] = nil
+    end
 end
 
 function getClosestPlayer()
-	local closest, shortestDist = nil, math.huge
-	for _, player in pairs(Players:GetPlayers()) do
-		if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
-			local pos, onScreen = Camera:WorldToViewportPoint(player.Character.Head.Position)
-			if onScreen then
-				local mousePos = UserInputService:GetMouseLocation()
-				local dist = (Vector2.new(pos.X, pos.Y) - Vector2.new(mousePos.X, mousePos.Y)).Magnitude
-				if dist < FOV_RADIUS and dist < shortestDist then
-					shortestDist = dist
-					closest = player
-				end
-			end
-		end
-	end
-	return closest
+    local closest, shortestDist = nil, math.huge
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
+            local pos, onScreen = Camera:WorldToViewportPoint(player.Character.Head.Position)
+            if onScreen then
+                local mousePos = UserInputService:GetMouseLocation()
+                local dist = (Vector2.new(pos.X, pos.Y) - Vector2.new(mousePos.X, mousePos.Y)).Magnitude
+                if dist < FOV_RADIUS and dist < shortestDist then
+                    shortestDist = dist
+                    closest = player
+                end
+            end
+        end
+    end
+    return closest
 end
 
 function aimAt(target)
-	if target and target.Character and target.Character:FindFirstChild("Head") then
-		local headPos = target.Character.Head.Position
-		Camera.CFrame = CFrame.new(Camera.CFrame.Position, headPos)
-	end
+    if target and target.Character and target.Character:FindFirstChild("Head") then
+        local headPos = target.Character.Head.Position
+        Camera.CFrame = CFrame.new(Camera.CFrame.Position, headPos)
+    end
 end
 
 function smoothTeleportTo(targetPlayer)
-	if teleporting then return end
-	teleporting = true
+    if teleporting then return end
+    teleporting = true
 
-	local character = LocalPlayer.Character
-	local targetChar = targetPlayer.Character
-	if not (character and character:FindFirstChild("HumanoidRootPart")) then teleporting = false return end
-	if not (targetChar and targetChar:FindFirstChild("HumanoidRootPart")) then teleporting = false return end
+    local character = LocalPlayer.Character
+    local targetChar = targetPlayer.Character
+    if not (character and character:FindFirstChild("HumanoidRootPart")) then teleporting = false return end
+    if not (targetChar and targetChar:FindFirstChild("HumanoidRootPart")) then teleporting = false return end
 
-	local hrp = character.HumanoidRootPart
-	local targetPos = targetChar.HumanoidRootPart.Position
+    local hrp = character.HumanoidRootPart
+    local targetPos = targetChar.HumanoidRootPart.Position
 
-	for i = 1, 100 do
-		hrp.CFrame = hrp.CFrame + Vector3.new(0, 2, 0)
-		task.wait(0.01)
-	end
+    for i = 1, 100 do
+        hrp.CFrame = hrp.CFrame + Vector3.new(0, 3, 0)
+        task.wait(0.02)
+    end
 
-	local startPos = hrp.Position
-	local height = 300
-	local flightSteps = 150
-	for i = 1, flightSteps do
-		local t = i / flightSteps
-		local curve = Vector3.new(
-			startPos.X + (targetPos.X - startPos.X) * t,
-			startPos.Y + (targetPos.Y + height - startPos.Y) * t,
-			startPos.Z + (targetPos.Z - startPos.Z) * t
-		)
-		hrp.CFrame = CFrame.new(curve)
-		task.wait(0.015)
-	end
+    local startPos = hrp.Position
+    local height = 300
+    local flightSteps = 150
+    for i = 1, flightSteps do
+        local t = i / flightSteps
+        local curve = Vector3.new(
+            startPos.X + (targetPos.X - startPos.X) * t,
+            startPos.Y + (targetPos.Y + height - startPos.Y) * t,
+            startPos.Z + (targetPos.Z - startPos.Z) * t
+        )
+        hrp.CFrame = CFrame.new(curve)
+        task.wait(0.02)
+    end
 
-	for i = 1, 70 do
-		hrp.CFrame = hrp.CFrame - Vector3.new(0, 4, 0)
-		task.wait(0.01)
-	end
+    for i = 1, 50 do
+        hrp.CFrame = hrp.CFrame - Vector3.new(0, 4, 0)
+        task.wait(0.01)
+    end
 
-	teleporting = false
+    teleporting = false
 end
 
-function enableNoclip()
-	noclipConnection = RunService.Stepped:Connect(function()
-		local character = LocalPlayer.Character
-		if character then
-			for _, part in pairs(character:GetChildren()) do
-				if part:IsA("BasePart") then
-					part.CanCollide = false
-				end
-			end
-		end
-	end)
+Players.PlayerAdded:Connect(function(player)
+    player.CharacterAdded:Connect(function()
+        wait(1)
+        createESP(player)
+    end)
+    createESP(player)
+end)
+
+Players.PlayerRemoving:Connect(removeESP)
+
+for _, player in pairs(Players:GetPlayers()) do
+    createESP(player)
 end
 
-function disableNoclip()
-	if noclipConnection then
-		noclipConnection:Disconnect()
-		noclipConnection = nil
-	end
-
-	local character = LocalPlayer.Character
-	if character then
-		for _, part in pairs(character:GetChildren()) do
-			if part:IsA("BasePart") then
-				part.CanCollide = true
-			end
-		end
-	end
-end
-
-function toggleNoclip()
-	noclipEnabled = not noclipEnabled
-	if noclipEnabled then
-		enableNoclip()
-		toggleNoclipButton.Text = "Noclip: ON"
-	else
-		disableNoclip()
-		toggleNoclipButton.Text = "Noclip: OFF"
-	end
-end
+UserInputService.InputBegan:Connect(function(input, gp)
+    if not gp then
+        if input.KeyCode == Enum.KeyCode.H then
+            AIMBOT_ENABLED = not AIMBOT_ENABLED
+        elseif input.KeyCode == Enum.KeyCode.J then
+            screenGui.Enabled = not screenGui.Enabled
+        end
+    end
+end)
 
 local screenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
-screenGui.Name = "ESPMenu"
+screenGui.Name = "TeleportMenu"
 
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 300, 0, 400)
-frame.Position = UDim2.new(1, -320, 0.35, 0)
+frame.Size = UDim2.new(0, 250, 0, 400)
+frame.Position = UDim2.new(1, -270, 0.3, 0) -- domyślnie po prawej stronie
 frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 frame.BorderSizePixel = 0
-frame.Active = false
 frame.Parent = screenGui
 
 local uiList = Instance.new("UIListLayout", frame)
 uiList.SortOrder = Enum.SortOrder.LayoutOrder
 uiList.Padding = UDim.new(0, 4)
 
-local toggleNoclipButton = Instance.new("TextButton")
-toggleNoclipButton.Size = UDim2.new(0, 120, 0, 30)
-toggleNoclipButton.Position = UDim2.new(1, -140, 0, 20)
-toggleNoclipButton.Text = "Noclip: OFF"
-toggleNoclipButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-toggleNoclipButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-toggleNoclipButton.Font = Enum.Font.SourceSans
-toggleNoclipButton.TextSize = 16
-toggleNoclipButton.Parent = screenGui
-
-toggleNoclipButton.MouseButton1Click:Connect(toggleNoclip)
-
-local hideMenu = false
-UserInputService.InputBegan:Connect(function(input, gp)
-	if not gp and input.KeyCode == Enum.KeyCode.J then
-		hideMenu = not hideMenu
-		screenGui.Enabled = not hideMenu
-	end
-end)
-
-local selectedTeleportPlayer = nil
-
 local function createPlayerButton(player)
-	local button = Instance.new("TextButton")
-	button.Size = UDim2.new(1, -10, 0, 30)
-	button.Text = player.Name
-	button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-	button.TextColor3 = Color3.fromRGB(255, 255, 255)
-	button.Font = Enum.Font.SourceSans
-	button.TextSize = 16
-	button.Parent = frame
+    local button = Instance.new("TextButton")
+    button.Size = UDim2.new(1, -10, 0, 30)
+    button.Text = player.Name
+    button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    button.Font = Enum.Font.SourceSans
+    button.TextSize = 16
+    button.Parent = frame
 
-	button.MouseButton1Click:Connect(function()
-		if AIMBOT_ENABLED then
-			button.Text = "Wyłącz najpierw Aimbot!"
-			task.delay(1.5, function() button.Text = player.Name end)
-			return
-		end
-		selectedTeleportPlayer = player
-		smoothTeleportTo(player)
-	end)
+    button.MouseButton1Click:Connect(function()
+        if AIMBOT_ENABLED then return end
+        smoothTeleportTo(player)
+    end)
 end
 
 local function refreshPlayerList()
-	for _, child in pairs(frame:GetChildren()) do
-		if child:IsA("TextButton") then
-			child:Destroy()
-		end
-	end
+    for _, child in pairs(frame:GetChildren()) do
+        if child:IsA("TextButton") then
+            child:Destroy()
+        end
+    end
 
-	for _, player in ipairs(Players:GetPlayers()) do
-		if player ~= LocalPlayer then
-			createPlayerButton(player)
-		end
-	end
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            createPlayerButton(player)
+        end
+    end
 end
 
 refreshPlayerList()
@@ -249,101 +216,114 @@ refreshPlayerList()
 Players.PlayerAdded:Connect(refreshPlayerList)
 Players.PlayerRemoving:Connect(refreshPlayerList)
 
+spawn(function()
+    while true do
+        refreshPlayerList()
+        task.wait(5)
+    end
+end)
+
 RunService.RenderStepped:Connect(function()
-	local mousePos = UserInputService:GetMouseLocation()
-	FOV_Circle.Position = Vector2.new(mousePos.X, mousePos.Y)
+    local mousePos = UserInputService:GetMouseLocation()
+    FOV_Circle.Position = Vector2.new(mousePos.X, mousePos.Y)
 
-	local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-	if humanoid then
-		humanoid.WalkSpeed = WALKSPEED_VALUE
-	end
+    local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        humanoid.WalkSpeed = WALKSPEED_VALUE
+    end
 
-	for player, data in pairs(espTable) do
-		if player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-			local hrp = player.Character.HumanoidRootPart
-			local head = player.Character:FindFirstChild("Head")
-			local pos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
+    for player, data in pairs(espTable) do
+        if player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local hrp = player.Character.HumanoidRootPart
+            local head = player.Character:FindFirstChild("Head")
+            local pos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
 
-			if onScreen then
-				local distance = math.floor((hrp.Position - Camera.CFrame.Position).Magnitude)
-				data.Tag.Text = player.Name .. " [" .. distance .. "m]"
-				data.Tag.Position = Vector2.new(pos.X, pos.Y - 20)
-				data.Tag.Visible = true
+            if onScreen then
+                local distance = math.floor((hrp.Position - Camera.CFrame.Position).Magnitude)
+                data.Tag.Text = player.Name .. " [" .. distance .. "m]"
+                data.Tag.Position = Vector2.new(pos.X, pos.Y - 20)
+                data.Tag.Visible = true
 
-				data.Line.From = Vector2.new(mousePos.X, mousePos.Y)
-				data.Line.To = Vector2.new(pos.X, pos.Y)
-				data.Line.Visible = true
+                data.Line.From = Vector2.new(mousePos.X, mousePos.Y)
+                data.Line.To = Vector2.new(pos.X, pos.Y)
+                data.Line.Visible = true
 
-				local headPos, onScr1 = Camera:WorldToViewportPoint(head.Position)
-				local leg = player.Character:FindFirstChild("LeftFoot") or player.Character:FindFirstChild("LowerTorso") or hrp
-				local legPos, onScr2 = Camera:WorldToViewportPoint(leg.Position)
-				if onScr1 and onScr2 then
-					local size = Vector2.new(50, 70)
-					local boxPos = Vector2.new(headPos.X - size.X / 2, headPos.Y - size.Y / 2)
+                local headPos, onScr1 = Camera:WorldToViewportPoint(head.Position)
+                local leg = player.Character:FindFirstChild("LeftFoot") or player.Character:FindFirstChild("LowerTorso") or hrp
+                local legPos, onScr2 = Camera:WorldToViewportPoint(leg.Position)
+                if onScr1 and onScr2 then
+                    local height = math.abs(headPos.Y - legPos.Y)
+                    local width = height / 2
+                    data.Box.Position = Vector2.new(pos.X - width / 2, headPos.Y)
+                    data.Box.Size = Vector2.new(width, height)
+                    data.Box.Visible = true
+                else
+                    data.Box.Visible = false
+                end
 
-					data.Box.Position = boxPos
-					data.Box.Size = size
-					data.Box.Visible = true
+                data.Highlight.Adornee = player.Character
+                local color = getTeamColor(player)
+                data.Highlight.FillColor = color
+                data.Line.Color = color
+                data.Tag.Color = color
+                data.Box.Color = color
+            else
+                data.Tag.Visible = false
+                data.Line.Visible = false
+                data.Box.Visible = false
+            end
+        end
+    end
 
-					data.Highlight.Adornee = player.Character
-					data.Highlight.Enabled = ESP_ENABLED
-				else
-					data.Box.Visible = false
-					data.Highlight.Enabled = false
-				end
-
-				local team = player.Team and player.Team.Name or "Neutral"
-				if team == "Police" then
-					data.Highlight.FillColor = Color3.fromRGB(0, 100, 255)
-					data.Line.Color = Color3.fromRGB(0, 100, 255)
-					data.Tag.Color = Color3.fromRGB(0, 100, 255)
-					data.Box.Color = Color3.fromRGB(0, 100, 255)
-				elseif team == "Criminal" then
-					data.Highlight.FillColor = Color3.fromRGB(255, 0, 0)
-					data.Line.Color = Color3.fromRGB(255, 0, 0)
-					data.Tag.Color = Color3.fromRGB(255, 0, 0)
-					data.Box.Color = Color3.fromRGB(255, 0, 0)
-				else
-					data.Highlight.FillColor = Color3.fromRGB(255, 255, 255)
-					data.Line.Color = Color3.fromRGB(255, 255, 255)
-					data.Tag.Color = Color3.fromRGB(255, 255, 255)
-					data.Box.Color = Color3.fromRGB(255, 255, 255)
-				end
-			else
-				data.Tag.Visible = false
-				data.Line.Visible = false
-				data.Box.Visible = false
-				data.Highlight.Enabled = false
-			end
-		else
-			removeESP(player)
-		end
-	end
-
-	if AIMBOT_ENABLED then
-		local target = getClosestPlayer()
-		if target then
-			aimAt(target)
-		end
-	end
+    if AIMBOT_ENABLED then
+        local target = getClosestPlayer()
+        if target then aimAt(target) end
+    end
 end)
 
-Players.PlayerAdded:Connect(function(player)
-	player.CharacterAdded:Connect(function()
-		wait(1)
-		createESP(player)
-	end)
-	createESP(player)
-end)
-
-Players.PlayerRemoving:Connect(removeESP)
-
-for _, player in pairs(Players:GetPlayers()) do
-	createESP(player)
+local function setNoclip(enabled)
+    noclipEnabled = enabled
+    if enabled then
+        RunService.Stepped:Connect(function()
+            local character = LocalPlayer.Character
+            if character then
+                for _, part in pairs(character:GetChildren()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = false
+                    end
+                end
+            end
+        end)
+    end
 end
 
-UserInputService.InputBegan:Connect(function(input, gp)
-	if not gp and input.KeyCode == Enum.KeyCode.H then
-		AIMBOT_ENABLED = not AIMBOT_ENABLED
-	end
+local noclipToggle = Instance.new("TextButton")
+noclipToggle.Size = UDim2.new(0, 120, 0, 30)
+noclipToggle.Position = UDim2.new(1, -130, 0, 10)
+noclipToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+noclipToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+noclipToggle.Font = Enum.Font.SourceSans
+noclipToggle.TextSize = 16
+noclipToggle.Text = "Toggle Noclip"
+noclipToggle.Parent = screenGui
+
+noclipToggle.MouseButton1Click:Connect(function()
+    noclipEnabled = not noclipEnabled
+    if noclipEnabled then
+        noclipToggle.Text = "Noclip ON"
+    else
+        noclipToggle.Text = "Noclip OFF"
+    end
+    if noclipEnabled then
+        RunService.Stepped:Connect(function()
+            local character = LocalPlayer.Character
+            if character then
+                for _, part in pairs(character:GetChildren()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = false
+                    end
+                end
+            end
+        end)
+    end
 end)
