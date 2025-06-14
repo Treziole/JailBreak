@@ -1,7 +1,6 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
@@ -18,6 +17,43 @@ local teamColors = {
 
 local lastTeams = {}
 
+-- UI
+local screenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
+screenGui.ResetOnSpawn = false
+
+local notificationLabel = Instance.new("TextLabel", screenGui)
+notificationLabel.Size = UDim2.new(1, 0, 0, 40)
+notificationLabel.Position = UDim2.new(0, 0, 0, 0)
+notificationLabel.BackgroundTransparency = 1
+notificationLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+notificationLabel.TextStrokeTransparency = 0.5
+notificationLabel.TextScaled = true
+notificationLabel.Font = Enum.Font.SourceSansBold
+notificationLabel.Text = ""
+notificationLabel.Visible = false
+
+local aimbotStatus = Instance.new("TextLabel", screenGui)
+aimbotStatus.Size = UDim2.new(0, 200, 0, 40)
+aimbotStatus.Position = UDim2.new(0.5, -100, 1, -45)
+aimbotStatus.BackgroundTransparency = 1
+aimbotStatus.TextColor3 = Color3.fromRGB(255, 255, 255)
+aimbotStatus.TextStrokeTransparency = 0.5
+aimbotStatus.TextScaled = true
+aimbotStatus.Font = Enum.Font.SourceSansBold
+aimbotStatus.Text = "Aimbot: OFF"
+
+local function showNotification(text)
+	notificationLabel.Text = text
+	notificationLabel.Visible = true
+	task.delay(2.5, function()
+		notificationLabel.Visible = false
+	end)
+end
+
+local function updateAimbotStatus()
+	aimbotStatus.Text = "Aimbot: " .. (aimbotEnabled and "ON" or "OFF")
+end
+
 local function setWalkSpeed()
 	local char = LocalPlayer.Character
 	if char then
@@ -27,6 +63,11 @@ local function setWalkSpeed()
 		end
 	end
 end
+
+LocalPlayer.CharacterAdded:Connect(function()
+	repeat task.wait() until LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+	setWalkSpeed()
+end)
 
 task.spawn(function()
 	while true do
@@ -99,14 +140,20 @@ task.spawn(function()
 			if player ~= LocalPlayer and player.Character then
 				local tag = player.Character:FindFirstChild("AimbotTag")
 				if tag then
-					local newColor = teamColors[player.Team and player.Team.Name or "Prisoner"] or Color3.new(1, 1, 1)
-					if lastTeams[player] ~= player.Team or tag:FindFirstChild("Highlight").FillColor ~= newColor then
+					local currentTeam = player.Team
+					local newColor = teamColors[currentTeam and currentTeam.Name or "Prisoner"] or Color3.new(1, 1, 1)
+					if lastTeams[player] ~= currentTeam or tag:FindFirstChild("Highlight").FillColor ~= newColor then
 						tag:FindFirstChild("Highlight").FillColor = newColor
 						local nameGui = tag:FindFirstChildWhichIsA("BillboardGui")
 						if nameGui and nameGui:FindFirstChildOfClass("TextLabel") then
 							nameGui:FindFirstChildOfClass("TextLabel").TextColor3 = newColor
 						end
-						lastTeams[player] = player.Team
+
+						if lastTeams[player] and lastTeams[player].Name == "Prisoner" and currentTeam and currentTeam.Name == "Criminal" then
+							showNotification("Prisoner: " .. player.Name .. " Changed To Criminal")
+						end
+
+						lastTeams[player] = currentTeam
 					end
 				end
 			end
@@ -149,6 +196,7 @@ end)
 UserInputService.InputBegan:Connect(function(input, processed)
 	if not processed and input.KeyCode == Enum.KeyCode.H then
 		aimbotEnabled = not aimbotEnabled
+		updateAimbotStatus()
 	end
 end)
 
@@ -160,3 +208,5 @@ LocalPlayer.Chatted:Connect(function(msg)
 		walkspeedTarget = tonumber(arg)
 	end
 end)
+
+updateAimbotStatus()
