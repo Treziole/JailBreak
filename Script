@@ -10,6 +10,7 @@ local FOV_RADIUS = 120
 local WALKSPEED_VALUE = 30
 local teleporting = false
 local noclipEnabled = false
+local noclipConnection = nil
 
 local FOV_Circle = Drawing.new("Circle")
 FOV_Circle.Radius = FOV_RADIUS
@@ -172,7 +173,7 @@ screenGui.Name = "TeleportMenu"
 
 local frame = Instance.new("Frame")
 frame.Size = UDim2.new(0, 250, 0, 400)
-frame.Position = UDim2.new(1, -270, 0.3, 0) -- domyślnie po prawej stronie
+frame.Position = UDim2.new(1, -270, 0.3, 0)
 frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 frame.BorderSizePixel = 0
 frame.Parent = screenGui
@@ -281,22 +282,6 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
-local function setNoclip(enabled)
-    noclipEnabled = enabled
-    if enabled then
-        RunService.Stepped:Connect(function()
-            local character = LocalPlayer.Character
-            if character then
-                for _, part in pairs(character:GetChildren()) do
-                    if part:IsA("BasePart") then
-                        part.CanCollide = false
-                    end
-                end
-            end
-        end)
-    end
-end
-
 local noclipToggle = Instance.new("TextButton")
 noclipToggle.Size = UDim2.new(0, 120, 0, 30)
 noclipToggle.Position = UDim2.new(1, -130, 0, 10)
@@ -309,13 +294,13 @@ noclipToggle.Parent = screenGui
 
 noclipToggle.MouseButton1Click:Connect(function()
     noclipEnabled = not noclipEnabled
-    if noclipEnabled then
-        noclipToggle.Text = "Noclip ON"
-    else
-        noclipToggle.Text = "Noclip OFF"
+    noclipToggle.Text = noclipEnabled and "Noclip ON" or "Noclip OFF"
+    if noclipConnection then
+        noclipConnection:Disconnect()
+        noclipConnection = nil
     end
     if noclipEnabled then
-        RunService.Stepped:Connect(function()
+        noclipConnection = RunService.Stepped:Connect(function()
             local character = LocalPlayer.Character
             if character then
                 for _, part in pairs(character:GetChildren()) do
