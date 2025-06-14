@@ -1,16 +1,39 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
 local aimbotEnabled = false
-_G.FOV = 120
+local fov = 120
+local walkspeedTarget = 80
 
 local teamColors = {
 	Criminal = Color3.fromRGB(255, 0, 0),
 	Police = Color3.fromRGB(0, 100, 255),
 	Prisoner = Color3.fromRGB(255, 140, 0)
 }
+
+local lastTeams = {}
+
+local function setWalkSpeed()
+	local char = LocalPlayer.Character
+	if char then
+		local hum = char:FindFirstChildOfClass("Humanoid")
+		if hum and hum.WalkSpeed ~= walkspeedTarget then
+			hum.WalkSpeed = walkspeedTarget
+		end
+	end
+end
+
+task.spawn(function()
+	while true do
+		setWalkSpeed()
+		task.wait(0.1)
+	end
+end)
 
 local function tagPlayer(player)
 	if player == LocalPlayer then return end
@@ -70,16 +93,38 @@ task.spawn(function()
 	end
 end)
 
+task.spawn(function()
+	while true do
+		for _, player in ipairs(Players:GetPlayers()) do
+			if player ~= LocalPlayer and player.Character then
+				local tag = player.Character:FindFirstChild("AimbotTag")
+				if tag then
+					local newColor = teamColors[player.Team and player.Team.Name or "Prisoner"] or Color3.new(1, 1, 1)
+					if lastTeams[player] ~= player.Team or tag:FindFirstChild("Highlight").FillColor ~= newColor then
+						tag:FindFirstChild("Highlight").FillColor = newColor
+						local nameGui = tag:FindFirstChildWhichIsA("BillboardGui")
+						if nameGui and nameGui:FindFirstChildOfClass("TextLabel") then
+							nameGui:FindFirstChildOfClass("TextLabel").TextColor3 = newColor
+						end
+						lastTeams[player] = player.Team
+					end
+				end
+			end
+		end
+		task.wait(0.5)
+	end
+end)
+
 local function getTarget()
 	local closest = nil
-	local minDist = _G.FOV or 120
+	local minDist = fov
 	for _, player in ipairs(Players:GetPlayers()) do
 		if player ~= LocalPlayer and player.Team ~= LocalPlayer.Team and player.Character then
 			local head = player.Character:FindFirstChild("Head")
 			if head then
 				local screenPos, onScreen = Camera:WorldToViewportPoint(head.Position)
 				if onScreen then
-					local dist = (Vector2.new(screenPos.X, screenPos.Y) - Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)).Magnitude
+					local dist = (Vector2.new(screenPos.X, screenPos.Y) - Camera.ViewportSize / 2).Magnitude
 					if dist < minDist then
 						minDist = dist
 						closest = head
@@ -92,6 +137,7 @@ local function getTarget()
 end
 
 RunService.RenderStepped:Connect(function()
+	Camera.FieldOfView = fov
 	if aimbotEnabled then
 		local target = getTarget()
 		if target then
@@ -100,23 +146,17 @@ RunService.RenderStepped:Connect(function()
 	end
 end)
 
-local UIS = game:GetService("UserInputService")
-UIS.InputBegan:Connect(function(input, processed)
+UserInputService.InputBegan:Connect(function(input, processed)
 	if not processed and input.KeyCode == Enum.KeyCode.H then
 		aimbotEnabled = not aimbotEnabled
 	end
 end)
 
-LocalPlayer.CharacterAdded:Connect(function(char)
-	local hum = char:WaitForChild("Humanoid", 10)
-	if hum then
-		hum.WalkSpeed = 80
+LocalPlayer.Chatted:Connect(function(msg)
+	local cmd, arg = msg:match("^/(%w+)%s*(%d*)$")
+	if cmd == "fov" and tonumber(arg) then
+		fov = tonumber(arg)
+	elseif cmd == "ws" and tonumber(arg) then
+		walkspeedTarget = tonumber(arg)
 	end
 end)
-
-if LocalPlayer.Character then
-	local hum = LocalPlayer.Character:FindFirstChild("Humanoid")
-	if hum then
-		hum.WalkSpeed = 80
-	end
-end
