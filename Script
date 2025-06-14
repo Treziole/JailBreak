@@ -1,0 +1,107 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+local aimbotEnabled = false
+
+local teamColors = {
+	Criminal = Color3.fromRGB(255, 0, 0),
+	Police = Color3.fromRGB(0, 100, 255),
+	Prisoner = Color3.fromRGB(255, 140, 0)
+}
+
+local function tagPlayer(player)
+	if player == LocalPlayer then return end
+	local char = player.Character
+	if not char then return end
+	local hrp = char:FindFirstChild("HumanoidRootPart")
+	local head = char:FindFirstChild("Head")
+	if not hrp or not head then return end
+
+	if not char:FindFirstChild("AimbotTag") then
+		local tag = Instance.new("Folder", char)
+		tag.Name = "AimbotTag"
+
+		local highlight = Instance.new("Highlight", tag)
+		highlight.FillColor = teamColors[player.Team and player.Team.Name or "Prisoner"] or Color3.new(1, 1, 1)
+		highlight.OutlineTransparency = 1
+		highlight.Adornee = char
+
+		local billboard = Instance.new("BillboardGui", tag)
+		billboard.Size = UDim2.new(0, 50, 0, 50)
+		billboard.AlwaysOnTop = true
+		billboard.Adornee = hrp
+
+		local frame = Instance.new("Frame", billboard)
+		frame.Size = UDim2.new(1, 0, 1, 0)
+		frame.BackgroundColor3 = Color3.new(1, 1, 1)
+		frame.BackgroundTransparency = 0.5
+		frame.BorderSizePixel = 0
+
+		local nametag = Instance.new("BillboardGui", tag)
+		nametag.Size = UDim2.new(0, 200, 0, 50)
+		nametag.StudsOffset = Vector3.new(0, 3, 0)
+		nametag.AlwaysOnTop = true
+		nametag.Adornee = head
+
+		local label = Instance.new("TextLabel", nametag)
+		label.Size = UDim2.new(1, 0, 1, 0)
+		label.BackgroundTransparency = 1
+		label.Text = player.Name
+		label.TextColor3 = highlight.FillColor
+		label.TextStrokeTransparency = 0.5
+		label.TextScaled = true
+		label.Font = Enum.Font.SourceSansBold
+	end
+end
+
+task.spawn(function()
+	while true do
+		for _, player in ipairs(Players:GetPlayers()) do
+			pcall(function()
+				if player.Character then
+					tagPlayer(player)
+				end
+			end)
+		end
+		task.wait(1)
+	end
+end)
+
+local function getTarget()
+	local closest = nil
+	local minDist = math.huge
+	for _, player in ipairs(Players:GetPlayers()) do
+		if player ~= LocalPlayer and player.Team ~= LocalPlayer.Team and player.Character then
+			local head = player.Character:FindFirstChild("Head")
+			if head then
+				local screenPos, onScreen = Camera:WorldToViewportPoint(head.Position)
+				if onScreen then
+					local dist = (Vector2.new(screenPos.X, screenPos.Y) - Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)).Magnitude
+					if dist < minDist then
+						minDist = dist
+						closest = head
+					end
+				end
+			end
+		end
+	end
+	return closest
+end
+
+RunService.RenderStepped:Connect(function()
+	if aimbotEnabled then
+		local target = getTarget()
+		if target then
+			Camera.CFrame = CFrame.new(Camera.CFrame.Position, target.Position)
+		end
+	end
+end)
+
+local UIS = game:GetService("UserInputService")
+UIS.InputBegan:Connect(function(input, processed)
+	if not processed and input.KeyCode == Enum.KeyCode.H then
+		aimbotEnabled = not aimbotEnabled
+	end
+end)
