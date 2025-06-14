@@ -4,6 +4,7 @@ local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
 local aimbotEnabled = false
+_G.FOV = 120
 
 local teamColors = {
 	Criminal = Color3.fromRGB(255, 0, 0),
@@ -71,7 +72,7 @@ end)
 
 local function getTarget()
 	local closest = nil
-	local minDist = math.huge
+	local minDist = _G.FOV or 120
 	for _, player in ipairs(Players:GetPlayers()) do
 		if player ~= LocalPlayer and player.Team ~= LocalPlayer.Team and player.Character then
 			local head = player.Character:FindFirstChild("Head")
@@ -105,3 +106,17 @@ UIS.InputBegan:Connect(function(input, processed)
 		aimbotEnabled = not aimbotEnabled
 	end
 end)
+
+LocalPlayer.CharacterAdded:Connect(function(char)
+	local hum = char:WaitForChild("Humanoid", 10)
+	if hum then
+		hum.WalkSpeed = 80
+	end
+end)
+
+if LocalPlayer.Character then
+	local hum = LocalPlayer.Character:FindFirstChild("Humanoid")
+	if hum then
+		hum.WalkSpeed = 80
+	end
+end
