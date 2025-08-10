@@ -1,0 +1,355 @@
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local StarterGui = game:GetService("StarterGui")
+local Player = game.Players.LocalPlayer
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.ResetOnSpawn = false
+screenGui.Parent = Player:WaitForChild("PlayerGui")
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 820, 0, 560)
+frame.Position = UDim2.new(0.5, -410, 0.5, -280)
+frame.AnchorPoint = Vector2.new(0.5, 0.5)
+frame.BackgroundColor3 = Color3.fromRGB(20,20,20)
+frame.BorderSizePixel = 0
+frame.BackgroundTransparency = 1
+frame.Parent = screenGui
+
+local frameCorner = Instance.new("UICorner", frame)
+frameCorner.CornerRadius = UDim.new(0, 14)
+
+local topBar = Instance.new("Frame")
+topBar.Size = UDim2.new(1, 0, 0, 56)
+topBar.Position = UDim2.new(0, 0, 0, 0)
+topBar.BackgroundTransparency = 1
+topBar.Parent = frame
+
+local title = Instance.new("TextLabel", topBar)
+title.Size = UDim2.new(1, -220, 1, 0)
+title.Position = UDim2.new(0, 20, 0, 0)
+title.BackgroundTransparency = 1
+title.Text = "Sound Logger Loading..."
+title.Font = Enum.Font.GothamBold
+title.TextSize = 28
+title.TextColor3 = Color3.new(1,1,1)
+title.TextTransparency = 1
+title.TextXAlignment = Enum.TextXAlignment.Left
+
+local percent = Instance.new("TextLabel", topBar)
+percent.Size = UDim2.new(0, 140, 1, 0)
+percent.Position = UDim2.new(1, -160, 0, 0)
+percent.BackgroundTransparency = 1
+percent.Text = "0%"
+percent.Font = Enum.Font.Gotham
+percent.TextSize = 22
+percent.TextColor3 = Color3.fromRGB(180,180,180)
+percent.TextTransparency = 1
+percent.TextXAlignment = Enum.TextXAlignment.Right
+
+local complete = Instance.new("TextLabel", topBar)
+complete.Size = UDim2.new(0, 160, 1, 0)
+complete.Position = UDim2.new(1, -330, 0, 0)
+complete.BackgroundTransparency = 1
+complete.Text = "Complete"
+complete.Font = Enum.Font.GothamBold
+complete.TextSize = 22
+complete.TextColor3 = Color3.fromRGB(0,220,120)
+complete.TextTransparency = 1
+complete.TextXAlignment = Enum.TextXAlignment.Center
+
+local madeBy = Instance.new("TextLabel", frame)
+madeBy.Size = UDim2.new(1, 0, 0, 56)
+madeBy.Position = UDim2.new(0, 0, 0.5, -28)
+madeBy.BackgroundTransparency = 1
+madeBy.Text = "Made By Trezi"
+madeBy.Font = Enum.Font.GothamBold
+madeBy.TextSize = 32
+madeBy.TextColor3 = Color3.new(1,1,1)
+madeBy.TextTransparency = 1
+madeBy.TextXAlignment = Enum.TextXAlignment.Center
+madeBy.Visible = false
+
+local contentHolder = Instance.new("Frame", frame)
+contentHolder.Size = UDim2.new(1, -40, 1, -120)
+contentHolder.Position = UDim2.new(0, 20, 0, 70)
+contentHolder.BackgroundTransparency = 1
+contentHolder.Visible = false
+
+local logFrame = Instance.new("ScrollingFrame", contentHolder)
+logFrame.Size = UDim2.new(1, -160, 1, 0)
+logFrame.Position = UDim2.new(0, 0, 0, 0)
+logFrame.BackgroundColor3 = Color3.fromRGB(14,14,14)
+logFrame.BorderSizePixel = 0
+logFrame.ScrollBarThickness = 8
+logFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+logFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+logFrame.ScrollBarImageColor3 = Color3.fromRGB(80,80,80)
+
+local logCorner = Instance.new("UICorner", logFrame)
+logCorner.CornerRadius = UDim.new(0, 10)
+
+local listLayout = Instance.new("UIListLayout", logFrame)
+listLayout.Padding = UDim.new(0, 8)
+listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+listLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+
+local padding = Instance.new("UIPadding", logFrame)
+padding.PaddingTop = UDim.new(0, 12)
+padding.PaddingBottom = UDim.new(0, 12)
+padding.PaddingLeft = UDim.new(0, 12)
+padding.PaddingRight = UDim.new(0, 12)
+
+local controls = Instance.new("Frame", contentHolder)
+controls.Size = UDim2.new(0, 140, 1, 0)
+controls.Position = UDim2.new(1, -140, 0, 0)
+controls.BackgroundTransparency = 1
+
+local clearBtn = Instance.new("TextButton", controls)
+clearBtn.Size = UDim2.new(1, 0, 0, 44)
+clearBtn.Position = UDim2.new(0, 0, 0, 0)
+clearBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+clearBtn.TextColor3 = Color3.new(1,1,1)
+clearBtn.Font = Enum.Font.GothamBold
+clearBtn.TextSize = 18
+clearBtn.Text = "Clear"
+local clearCorner = Instance.new("UICorner", clearBtn)
+clearCorner.CornerRadius = UDim.new(0, 8)
+
+local copyAllBtn = Instance.new("TextButton", controls)
+copyAllBtn.Size = UDim2.new(1, 0, 0, 44)
+copyAllBtn.Position = UDim2.new(0, 0, 0, 54)
+copyAllBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
+copyAllBtn.TextColor3 = Color3.new(1,1,1)
+copyAllBtn.Font = Enum.Font.GothamBold
+copyAllBtn.TextSize = 18
+copyAllBtn.Text = "Copy All"
+local copyAllCorner = Instance.new("UICorner", copyAllBtn)
+copyAllCorner.CornerRadius = UDim.new(0, 8)
+
+local resizeBtn = Instance.new("TextButton", controls)
+resizeBtn.Size = UDim2.new(0, 44, 0, 44)
+resizeBtn.Position = UDim2.new(0.5, -22, 1, -54)
+resizeBtn.AnchorPoint = Vector2.new(0.5, 0)
+resizeBtn.BackgroundColor3 = Color3.fromRGB(130,130,130)
+resizeBtn.TextColor3 = Color3.new(1,1,1)
+resizeBtn.Font = Enum.Font.Gotham
+resizeBtn.TextSize = 20
+resizeBtn.Text = "↔"
+local resizeCorner = Instance.new("UICorner", resizeBtn)
+resizeCorner.CornerRadius = UDim.new(0, 8)
+
+local lastLogs = {}
+
+local dragging = false
+local dragStart, startPos
+local resizing = false
+local resizeStartMouse, resizeStartSize
+
+local function Tween(obj,ti,props)
+	local info = TweenInfo.new(ti, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+	local t = TweenService:Create(obj, info, props)
+	t:Play()
+	return t
+end
+
+local function animateIntro()
+	frame.Size = UDim2.new(0,0,0,0)
+	Tween(frame, 0.9, {Size = UDim2.new(0,820,0,560), BackgroundTransparency = 0})
+	task.wait(0.14)
+	Tween(title, 0.8, {TextTransparency = 0, Position = UDim2.new(0,20,0,0)})
+	task.wait(0.12)
+	Tween(percent, 0.8, {TextTransparency = 0})
+	task.wait(0.12)
+end
+
+local function animateLoading()
+	for i=0,100 do
+		percent.Text = tostring(i) .. "%"
+		task.wait(0.015)
+	end
+end
+
+local function animateComplete()
+	Tween(complete, 0.7, {TextTransparency = 0})
+	task.wait(1.3)
+	Tween(complete, 0.7, {TextTransparency = 1})
+end
+
+local function animateMadeBy()
+	complete.TextTransparency = 1
+	title.TextTransparency = 1
+	percent.TextTransparency = 1
+	madeBy.Visible = true
+	Tween(madeBy, 1, {TextTransparency = 0})
+	task.wait(2)
+	Tween(madeBy, 1, {TextTransparency = 1})
+	task.wait(1)
+	madeBy.Visible = false
+end
+
+local function showLogger()
+	title.Visible = false
+	percent.Visible = false
+	complete.Visible = false
+	contentHolder.Visible = true
+end
+
+local function createEntry(soundId)
+	local entry = Instance.new("Frame")
+	entry.Size = UDim2.new(1, -24, 0, 54)
+	entry.BackgroundColor3 = Color3.fromRGB(24,24,24)
+	entry.BorderSizePixel = 0
+	entry.Parent = logFrame
+	local c = Instance.new("UICorner", entry)
+	c.CornerRadius = UDim.new(0,8)
+	local label = Instance.new("TextLabel", entry)
+	label.Size = UDim2.new(1, -110, 1, 0)
+	label.Position = UDim2.new(0, 12, 0, 0)
+	label.BackgroundTransparency = 1
+	label.TextXAlignment = Enum.TextXAlignment.Left
+	label.TextYAlignment = Enum.TextYAlignment.Center
+	label.Font = Enum.Font.Code
+	label.TextSize = 18
+	label.TextColor3 = Color3.fromRGB(220,220,220)
+	label.Text = soundId
+	local copyBtn = Instance.new("TextButton", entry)
+	copyBtn.Size = UDim2.new(0,92,0,36)
+	copyBtn.Position = UDim2.new(1, -104, 0.5, -18)
+	copyBtn.BackgroundColor3 = Color3.fromRGB(40,40,40)
+	copyBtn.Font = Enum.Font.GothamSemibold
+	copyBtn.TextSize = 16
+	copyBtn.TextColor3 = Color3.fromRGB(240,240,240)
+	copyBtn.Text = "Copy"
+	local cp = Instance.new("UICorner", copyBtn)
+	cp.CornerRadius = UDim.new(0,6)
+	entry.LayoutOrder = -os.time()
+	entry.Size = UDim2.new(1, -24, 0, 0)
+	Tween(entry, 0.35, {Size = UDim2.new(1, -24, 0, 54)})
+	Tween(entry, 0.35, {BackgroundTransparency = 0})
+	copyBtn.MouseButton1Click:Connect(function()
+		if setclipboard then
+			pcall(setclipboard, soundId)
+		end
+		StarterGui:SetCore("SendNotification", {Title="Copied", Text=soundId, Duration=1.5})
+		Tween(copyBtn, 0.15, {BackgroundColor3 = Color3.fromRGB(0,150,255)})
+		task.delay(0.25, function()
+			Tween(copyBtn, 0.25, {BackgroundColor3 = Color3.fromRGB(40,40,40)})
+		end)
+	end)
+end
+
+local function addLog(soundId)
+	table.insert(lastLogs, 1, soundId)
+	createEntry(soundId)
+end
+
+clearBtn.MouseButton1Click:Connect(function()
+	local entries = {}
+	for _,v in ipairs(logFrame:GetChildren()) do
+		if v:IsA("Frame") then
+			table.insert(entries, v)
+		end
+	end
+	for i,entry in ipairs(entries) do
+		local goalPos = entry.Position + UDim2.new(0,0,0,50)
+		local tweenInfo = TweenInfo.new(0.4, Enum.EasingStyle.Quart, Enum.EasingDirection.In)
+		local tween = TweenService:Create(entry, tweenInfo, {Position = goalPos, BackgroundTransparency = 1})
+		tween:Play()
+		for _, child in ipairs(entry:GetChildren()) do
+			if child:IsA("TextLabel") or child:IsA("TextButton") then
+				TweenService:Create(child, tweenInfo, {TextTransparency = 1}):Play()
+			end
+		end
+		tween.Completed:Connect(function()
+			entry:Destroy()
+		end)
+		task.wait(0.05)
+	end
+	lastLogs = {}
+end)
+
+copyAllBtn.MouseButton1Click:Connect(function()
+	if #lastLogs == 0 then return end
+	local combined = table.concat(lastLogs, "\n")
+	if setclipboard then
+		pcall(setclipboard, combined)
+	end
+	StarterGui:SetCore("SendNotification", {Title="Copied All", Text="All sound IDs copied", Duration=1.5})
+end)
+
+resizeBtn.MouseButton1Down:Connect(function()
+	resizing = true
+	resizeStartMouse = UserInputService:GetMouseLocation()
+	resizeStartSize = Vector2.new(frame.AbsoluteSize.X, frame.AbsoluteSize.Y)
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		resizing = false
+		dragging = false
+	end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseMovement then
+		if resizing and resizeStartMouse and resizeStartSize then
+			local m = UserInputService:GetMouseLocation()
+			local delta = m - resizeStartMouse
+			local newX = math.clamp(resizeStartSize.X + delta.X, 420, 1200)
+			local newY = math.clamp(resizeStartSize.Y + delta.Y, 300, 900)
+			frame.Size = UDim2.new(0, newX, 0, newY)
+		end
+	end
+end)
+
+topBar.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = true
+		dragStart = UserInputService:GetMouseLocation()
+		startPos = frame.Position
+	end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseMovement then
+		if dragging and dragStart and startPos then
+			local m = UserInputService:GetMouseLocation()
+			local delta = m - dragStart
+			local newX = startPos.X.Offset + delta.X
+			local newY = startPos.Y.Offset + delta.Y
+			frame.Position = UDim2.new(0, newX, 0, newY)
+		end
+	end
+end)
+
+local function onSoundPlayed(sound)
+	local id = tostring(sound.SoundId or sound.SoundId == "" and sound.Name or sound.SoundId)
+	addLog(id)
+end
+
+for _,v in pairs(workspace:GetDescendants()) do
+	if v:IsA("Sound") then
+		v.Played:Connect(function()
+			onSoundPlayed(v)
+		end)
+	end
+end
+
+workspace.DescendantAdded:Connect(function(desc)
+	if desc:IsA("Sound") then
+		desc.Played:Connect(function()
+			onSoundPlayed(desc)
+		end)
+	end
+end)
+
+local function main()
+	animateIntro()
+	animateLoading()
+	animateComplete()
+	animateMadeBy()
+	showLogger()
+end
+
+main()
