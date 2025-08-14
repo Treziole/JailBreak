@@ -16,20 +16,8 @@ frame.BackgroundColor3 = Color3.fromRGB(20,20,20)
 frame.BorderSizePixel = 0
 frame.BackgroundTransparency = 1
 frame.Parent = screenGui
-
 local frameCorner = Instance.new("UICorner", frame)
 frameCorner.CornerRadius = UDim.new(0, 14)
-
-local title = Instance.new("TextLabel", frame)
-title.Size = UDim2.new(1, 0, 0, 60)
-title.Position = UDim2.new(0, 0, 0, 20)
-title.BackgroundTransparency = 1
-title.Text = "Loading..."
-title.Font = Enum.Font.GothamBold
-title.TextSize = 32
-title.TextColor3 = Color3.new(1,1,1)
-title.TextTransparency = 1
-title.TextXAlignment = Enum.TextXAlignment.Center
 
 local madeBy = Instance.new("TextLabel", frame)
 madeBy.Size = UDim2.new(1, 0, 0, 56)
@@ -93,7 +81,6 @@ logFrame.ScrollBarThickness = 8
 logFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
 logFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
 logFrame.ScrollBarImageColor3 = Color3.fromRGB(80,80,80)
-
 local logCorner = Instance.new("UICorner", logFrame)
 logCorner.CornerRadius = UDim.new(0, 10)
 
@@ -135,7 +122,40 @@ copyAllBtn.Text = "Copy All"
 local copyAllCorner = Instance.new("UICorner", copyAllBtn)
 copyAllCorner.CornerRadius = UDim.new(0, 8)
 
+-- Notification frame
+local notification = Instance.new("Frame", screenGui)
+notification.Size = UDim2.new(0, 260, 0, 80)
+notification.Position = UDim2.new(1, 260, 1, -100)
+notification.AnchorPoint = Vector2.new(1, 0)
+notification.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+notification.BorderSizePixel = 0
+local notifCorner = Instance.new("UICorner", notification)
+notifCorner.CornerRadius = UDim.new(0, 8)
+notification.Visible = false
+
+local notifTitle = Instance.new("TextLabel", notification)
+notifTitle.Size = UDim2.new(1, -20, 0, 30)
+notifTitle.Position = UDim2.new(0, 10, 0, 5)
+notifTitle.BackgroundTransparency = 1
+notifTitle.Text = "NOTIFICATION!"
+notifTitle.Font = Enum.Font.GothamBold
+notifTitle.TextSize = 20
+notifTitle.TextColor3 = Color3.new(1,1,1)
+notifTitle.TextXAlignment = Enum.TextXAlignment.Left
+
+local notifText = Instance.new("TextLabel", notification)
+notifText.Size = UDim2.new(1, -20, 0, 40)
+notifText.Position = UDim2.new(0, 10, 0, 35)
+notifText.BackgroundTransparency = 1
+notifText.Text = "Press M to back to menu"
+notifText.Font = Enum.Font.Gotham
+notifText.TextSize = 16
+notifText.TextColor3 = Color3.fromRGB(200,200,200)
+notifText.TextXAlignment = Enum.TextXAlignment.Left
+
 local lastLogs = {}
+local currentMode = nil
+local runningConnections = {}
 
 local function Tween(obj,ti,props)
 	local info = TweenInfo.new(ti, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
@@ -172,9 +192,6 @@ local function createEntry(text)
 	copyBtn.Text = "Copy"
 	local cp = Instance.new("UICorner", copyBtn)
 	cp.CornerRadius = UDim.new(0,6)
-	entry.LayoutOrder = -os.time()
-	entry.Size = UDim2.new(1, -24, 0, 0)
-	Tween(entry, 0.35, {Size = UDim2.new(1, -24, 0, 54)})
 	copyBtn.MouseButton1Click:Connect(function()
 		if setclipboard then
 			pcall(setclipboard, text)
@@ -192,12 +209,14 @@ local function addLog(text)
 	createEntry(text)
 end
 
-clearBtn.MouseButton1Click:Connect(function()
+local function clearLogs()
 	for _,v in ipairs(logFrame:GetChildren()) do
 		if v:IsA("Frame") then v:Destroy() end
 	end
 	lastLogs = {}
-end)
+end
+
+clearBtn.MouseButton1Click:Connect(clearLogs)
 
 copyAllBtn.MouseButton1Click:Connect(function()
 	if #lastLogs == 0 then return end
@@ -208,47 +227,69 @@ copyAllBtn.MouseButton1Click:Connect(function()
 	StarterGui:SetCore("SendNotification", {Title="Copied All", Text="All entries copied", Duration=1.5})
 end)
 
+local function stopLogger()
+	for _,conn in ipairs(runningConnections) do
+		conn:Disconnect()
+	end
+	runningConnections = {}
+	currentMode = nil
+	contentHolder.Visible = false
+	modeSelect.Visible = true
+	clearLogs()
+	notification.Visible = false
+end
+
+local function showNotification()
+	notification.Position = UDim2.new(1, 260, 1, -100)
+	notification.Visible = true
+	Tween(notification, 0.5, {Position = UDim2.new(1, -20, 1, -100)})
+end
+
 local function startSoundLogger()
 	contentHolder.Visible = true
+	currentMode = "sound"
+	showNotification()
 	for _,v in pairs(workspace:GetDescendants()) do
 		if v:IsA("Sound") then
-			v.Played:Connect(function()
+			table.insert(runningConnections, v.Played:Connect(function()
 				addLog(v.SoundId ~= "" and v.SoundId or v.Name)
-			end)
+			end))
 		end
 	end
-	workspace.DescendantAdded:Connect(function(desc)
+	table.insert(runningConnections, workspace.DescendantAdded:Connect(function(desc)
 		if desc:IsA("Sound") then
-			desc.Played:Connect(function()
+			table.insert(runningConnections, desc.Played:Connect(function()
 				addLog(desc.SoundId ~= "" and desc.SoundId or desc.Name)
-			end)
+			end))
 		end
-	end)
+	end))
 end
 
 local function startAnimationLogger()
 	contentHolder.Visible = true
+	currentMode = "animation"
+	showNotification()
 	local function hookHumanoid(hum)
-		hum.AnimationPlayed:Connect(function(track)
+		table.insert(runningConnections, hum.AnimationPlayed:Connect(function(track)
 			addLog(track.Animation and track.Animation.AnimationId or "Unknown Animation")
-		end)
+		end))
 	end
 	for _,plr in pairs(Players:GetPlayers()) do
 		if plr.Character then
 			local hum = plr.Character:FindFirstChildOfClass("Humanoid")
 			if hum then hookHumanoid(hum) end
 		end
-		plr.CharacterAdded:Connect(function(char)
+		table.insert(runningConnections, plr.CharacterAdded:Connect(function(char)
 			local hum = char:WaitForChild("Humanoid")
 			hookHumanoid(hum)
-		end)
+		end))
 	end
-	Players.PlayerAdded:Connect(function(plr)
-		plr.CharacterAdded:Connect(function(char)
+	table.insert(runningConnections, Players.PlayerAdded:Connect(function(plr)
+		table.insert(runningConnections, plr.CharacterAdded:Connect(function(char)
 			local hum = char:WaitForChild("Humanoid")
 			hookHumanoid(hum)
-		end)
-	end)
+		end))
+	end))
 end
 
 soundBtn.MouseButton1Click:Connect(function()
@@ -259,6 +300,12 @@ end)
 animBtn.MouseButton1Click:Connect(function()
 	modeSelect.Visible = false
 	startAnimationLogger()
+end)
+
+UserInputService.InputBegan:Connect(function(input, gp)
+	if not gp and input.KeyCode == Enum.KeyCode.M and currentMode then
+		stopLogger()
+	end
 end)
 
 local function main()
