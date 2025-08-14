@@ -2,8 +2,9 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local StarterGui = game:GetService("StarterGui")
 local Players = game:GetService("Players")
-local Player = Players.LocalPlayer
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Player = Players.LocalPlayer
 local screenGui = Instance.new("ScreenGui")
 screenGui.ResetOnSpawn = false
 screenGui.Parent = Player:WaitForChild("PlayerGui")
@@ -15,9 +16,51 @@ frame.AnchorPoint = Vector2.new(0.5, 0.5)
 frame.BackgroundColor3 = Color3.fromRGB(20,20,20)
 frame.BorderSizePixel = 0
 frame.BackgroundTransparency = 1
+frame.Active = true
+frame.Draggable = true
 frame.Parent = screenGui
+
 local frameCorner = Instance.new("UICorner", frame)
 frameCorner.CornerRadius = UDim.new(0, 14)
+
+local topBar = Instance.new("Frame")
+topBar.Size = UDim2.new(1, 0, 0, 56)
+topBar.Position = UDim2.new(0, 0, 0, 0)
+topBar.BackgroundTransparency = 1
+topBar.Parent = frame
+
+local title = Instance.new("TextLabel", topBar)
+title.Size = UDim2.new(1, -220, 1, 0)
+title.Position = UDim2.new(0, 20, 0, 0)
+title.BackgroundTransparency = 1
+title.Text = "Loading..."
+title.Font = Enum.Font.GothamBold
+title.TextSize = 28
+title.TextColor3 = Color3.new(1,1,1)
+title.TextTransparency = 1
+title.TextXAlignment = Enum.TextXAlignment.Left
+
+local percent = Instance.new("TextLabel", topBar)
+percent.Size = UDim2.new(0, 140, 1, 0)
+percent.Position = UDim2.new(1, -160, 0, 0)
+percent.BackgroundTransparency = 1
+percent.Text = "0%"
+percent.Font = Enum.Font.Gotham
+percent.TextSize = 22
+percent.TextColor3 = Color3.fromRGB(180,180,180)
+percent.TextTransparency = 1
+percent.TextXAlignment = Enum.TextXAlignment.Right
+
+local complete = Instance.new("TextLabel", topBar)
+complete.Size = UDim2.new(0, 160, 1, 0)
+complete.Position = UDim2.new(1, -330, 0, 0)
+complete.BackgroundTransparency = 1
+complete.Text = "Complete"
+complete.Font = Enum.Font.GothamBold
+complete.TextSize = 22
+complete.TextColor3 = Color3.fromRGB(0,220,120)
+complete.TextTransparency = 1
+complete.TextXAlignment = Enum.TextXAlignment.Center
 
 local madeBy = Instance.new("TextLabel", frame)
 madeBy.Size = UDim2.new(1, 0, 0, 56)
@@ -29,46 +72,39 @@ madeBy.TextSize = 32
 madeBy.TextColor3 = Color3.new(1,1,1)
 madeBy.TextTransparency = 1
 madeBy.TextXAlignment = Enum.TextXAlignment.Center
+madeBy.Visible = false
 
 local modeSelect = Instance.new("Frame", frame)
-modeSelect.Size = UDim2.new(1, -80, 1, -120)
-modeSelect.Position = UDim2.new(0, 40, 0, 60)
+modeSelect.Size = UDim2.new(0, 300, 0, 200)
+modeSelect.Position = UDim2.new(0.5, -150, 0.5, -100)
 modeSelect.BackgroundTransparency = 1
 modeSelect.Visible = false
 
-local modeTitle = Instance.new("TextLabel", modeSelect)
-modeTitle.Size = UDim2.new(1, 0, 0, 50)
-modeTitle.BackgroundTransparency = 1
-modeTitle.Text = "Choose Logger Mode"
-modeTitle.Font = Enum.Font.GothamBold
-modeTitle.TextSize = 28
-modeTitle.TextColor3 = Color3.new(1,1,1)
-
 local soundBtn = Instance.new("TextButton", modeSelect)
 soundBtn.Size = UDim2.new(1, 0, 0, 50)
-soundBtn.Position = UDim2.new(0, 0, 0, 70)
-soundBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
-soundBtn.TextColor3 = Color3.new(1,1,1)
-soundBtn.Font = Enum.Font.GothamBold
-soundBtn.TextSize = 20
+soundBtn.Position = UDim2.new(0,0,0,0)
 soundBtn.Text = "Sound Logger"
+soundBtn.Font = Enum.Font.GothamBold
+soundBtn.TextSize = 22
+soundBtn.BackgroundColor3 = Color3.fromRGB(0,120,255)
+soundBtn.TextColor3 = Color3.new(1,1,1)
 local soundCorner = Instance.new("UICorner", soundBtn)
-soundCorner.CornerRadius = UDim.new(0, 8)
+soundCorner.CornerRadius = UDim.new(0,8)
 
 local animBtn = Instance.new("TextButton", modeSelect)
 animBtn.Size = UDim2.new(1, 0, 0, 50)
-animBtn.Position = UDim2.new(0, 0, 0, 130)
-animBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 120)
-animBtn.TextColor3 = Color3.new(1,1,1)
-animBtn.Font = Enum.Font.GothamBold
-animBtn.TextSize = 20
+animBtn.Position = UDim2.new(0,0,0,60)
 animBtn.Text = "Animation Logger"
+animBtn.Font = Enum.Font.GothamBold
+animBtn.TextSize = 22
+animBtn.BackgroundColor3 = Color3.fromRGB(0,220,120)
+animBtn.TextColor3 = Color3.new(1,1,1)
 local animCorner = Instance.new("UICorner", animBtn)
-animCorner.CornerRadius = UDim.new(0, 8)
+animCorner.CornerRadius = UDim.new(0,8)
 
 local contentHolder = Instance.new("Frame", frame)
-contentHolder.Size = UDim2.new(1, -40, 1, -80)
-contentHolder.Position = UDim2.new(0, 20, 0, 60)
+contentHolder.Size = UDim2.new(1, -40, 1, -120)
+contentHolder.Position = UDim2.new(0, 20, 0, 70)
 contentHolder.BackgroundTransparency = 1
 contentHolder.Visible = false
 
@@ -81,6 +117,7 @@ logFrame.ScrollBarThickness = 8
 logFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
 logFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
 logFrame.ScrollBarImageColor3 = Color3.fromRGB(80,80,80)
+
 local logCorner = Instance.new("UICorner", logFrame)
 logCorner.CornerRadius = UDim.new(0, 10)
 
@@ -122,46 +159,50 @@ copyAllBtn.Text = "Copy All"
 local copyAllCorner = Instance.new("UICorner", copyAllBtn)
 copyAllCorner.CornerRadius = UDim.new(0, 8)
 
--- Notification frame
-local notification = Instance.new("Frame", screenGui)
-notification.Size = UDim2.new(0, 260, 0, 80)
-notification.Position = UDim2.new(1, 260, 1, -100)
-notification.AnchorPoint = Vector2.new(1, 0)
-notification.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-notification.BorderSizePixel = 0
-local notifCorner = Instance.new("UICorner", notification)
-notifCorner.CornerRadius = UDim.new(0, 8)
-notification.Visible = false
-
-local notifTitle = Instance.new("TextLabel", notification)
-notifTitle.Size = UDim2.new(1, -20, 0, 30)
-notifTitle.Position = UDim2.new(0, 10, 0, 5)
-notifTitle.BackgroundTransparency = 1
-notifTitle.Text = "NOTIFICATION!"
-notifTitle.Font = Enum.Font.GothamBold
-notifTitle.TextSize = 20
-notifTitle.TextColor3 = Color3.new(1,1,1)
-notifTitle.TextXAlignment = Enum.TextXAlignment.Left
-
-local notifText = Instance.new("TextLabel", notification)
-notifText.Size = UDim2.new(1, -20, 0, 40)
-notifText.Position = UDim2.new(0, 10, 0, 35)
-notifText.BackgroundTransparency = 1
-notifText.Text = "Press M to back to menu"
-notifText.Font = Enum.Font.Gotham
-notifText.TextSize = 16
-notifText.TextColor3 = Color3.fromRGB(200,200,200)
-notifText.TextXAlignment = Enum.TextXAlignment.Left
-
 local lastLogs = {}
 local currentMode = nil
-local runningConnections = {}
+local connections = {}
 
 local function Tween(obj,ti,props)
 	local info = TweenInfo.new(ti, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
 	local t = TweenService:Create(obj, info, props)
 	t:Play()
 	return t
+end
+
+local function animateIntro()
+	frame.Size = UDim2.new(0,0,0,0)
+	Tween(frame, 0.9, {Size = UDim2.new(0,820,0,560), BackgroundTransparency = 0})
+	task.wait(0.14)
+	Tween(title, 0.8, {TextTransparency = 0, Position = UDim2.new(0,20,0,0)})
+	task.wait(0.12)
+	Tween(percent, 0.8, {TextTransparency = 0})
+	task.wait(0.12)
+end
+
+local function animateLoading()
+	for i=0,100 do
+		percent.Text = tostring(i) .. "%"
+		task.wait(0.015)
+	end
+end
+
+local function animateComplete()
+	Tween(complete, 0.7, {TextTransparency = 0})
+	task.wait(1.3)
+	Tween(complete, 0.7, {TextTransparency = 1})
+end
+
+local function animateMadeBy()
+	complete.TextTransparency = 1
+	title.TextTransparency = 1
+	percent.TextTransparency = 1
+	madeBy.Visible = true
+	Tween(madeBy, 1, {TextTransparency = 0})
+	task.wait(2)
+	Tween(madeBy, 1, {TextTransparency = 1})
+	task.wait(1)
+	madeBy.Visible = false
 end
 
 local function createEntry(text)
@@ -192,16 +233,17 @@ local function createEntry(text)
 	copyBtn.Text = "Copy"
 	local cp = Instance.new("UICorner", copyBtn)
 	cp.CornerRadius = UDim.new(0,6)
+	entry.LayoutOrder = -os.time()
+	entry.Size = UDim2.new(1, -24, 0, 0)
+	Tween(entry, 0.35, {Size = UDim2.new(1, -24, 0, 54)})
+	Tween(entry, 0.35, {BackgroundTransparency = 0})
 	copyBtn.MouseButton1Click:Connect(function()
 		if setclipboard then
 			pcall(setclipboard, text)
 		end
-		StarterGui:SetCore("SendNotification", {Title="Copied", Text=text, Duration=1.5})
-		Tween(copyBtn, 0.15, {BackgroundColor3 = Color3.fromRGB(0,150,255)})
-		task.delay(0.25, function()
-			Tween(copyBtn, 0.25, {BackgroundColor3 = Color3.fromRGB(40,40,40)})
-		end)
+		StarterGui:SetCore("SendNotification", {Title = "Copied!", Text = text, Duration = 1})
 	end)
+	return entry
 end
 
 local function addLog(text)
@@ -209,98 +251,69 @@ local function addLog(text)
 	createEntry(text)
 end
 
-local function clearLogs()
-	for _,v in ipairs(logFrame:GetChildren()) do
-		if v:IsA("Frame") then v:Destroy() end
+clearBtn.MouseButton1Click:Connect(function()
+	for _,v in pairs(logFrame:GetChildren()) do
+		if v:IsA("Frame") then
+			v:Destroy()
+		end
 	end
 	lastLogs = {}
-end
-
-clearBtn.MouseButton1Click:Connect(clearLogs)
+end)
 
 copyAllBtn.MouseButton1Click:Connect(function()
-	if #lastLogs == 0 then return end
-	local combined = table.concat(lastLogs, "\n")
 	if setclipboard then
-		pcall(setclipboard, combined)
+		pcall(setclipboard, table.concat(lastLogs, "\n"))
 	end
-	StarterGui:SetCore("SendNotification", {Title="Copied All", Text="All entries copied", Duration=1.5})
+	StarterGui:SetCore("SendNotification", {Title = "Copied!", Text = "All logs copied", Duration = 1})
 end)
+
+local function getFullPath(obj)
+	local path = obj.Name
+	local parent = obj.Parent
+	while parent and parent ~= game do
+		path = parent.Name .. "." .. path
+		parent = parent.Parent
+	end
+	return path
+end
+
+local function showNotification(text)
+	local notif = Instance.new("Frame", screenGui)
+	notif.Size = UDim2.new(0, 220, 0, 60)
+	notif.Position = UDim2.new(1, -240, 1, -80)
+	notif.BackgroundColor3 = Color3.fromRGB(36,36,36)
+	notif.BorderSizePixel = 0
+	local nc = Instance.new("UICorner", notif)
+	nc.CornerRadius = UDim.new(0,10)
+	local t = Instance.new("TextLabel", notif)
+	t.Size = UDim2.new(1, -20, 0.5, -5)
+	t.Position = UDim2.new(0, 10, 0, 5)
+	t.BackgroundTransparency = 1
+	t.Text = "NOTIFICATION!"
+	t.Font = Enum.Font.GothamBold
+	t.TextSize = 18
+	t.TextColor3 = Color3.fromRGB(220,220,220)
+	local t2 = Instance.new("TextLabel", notif)
+	t2.Size = UDim2.new(1, -20, 0.5, -5)
+	t2.Position = UDim2.new(0, 10, 0.5, 0)
+	t2.BackgroundTransparency = 1
+	t2.Text = text
+	t2.Font = Enum.Font.Gotham
+	t2.TextSize = 14
+	t2.TextColor3 = Color3.fromRGB(180,180,180)
+	delay(3,function() notif:Destroy() end)
+end
 
 local function stopLogger()
-	for _,conn in ipairs(runningConnections) do
-		conn:Disconnect()
+	for _,c in pairs(connections) do
+		if c then pcall(function() c:Disconnect() end) end
 	end
-	runningConnections = {}
+	connections = {}
 	currentMode = nil
-	contentHolder.Visible = false
+	logFrame:ClearAllChildren()
 	modeSelect.Visible = true
-	clearLogs()
-	notification.Visible = false
+	contentHolder.Visible = false
 end
-
-local function showNotification()
-	notification.Position = UDim2.new(1, 260, 1, -100)
-	notification.Visible = true
-	Tween(notification, 0.5, {Position = UDim2.new(1, -20, 1, -100)})
-end
-
-local function startSoundLogger()
-	contentHolder.Visible = true
-	currentMode = "sound"
-	showNotification()
-	for _,v in pairs(workspace:GetDescendants()) do
-		if v:IsA("Sound") then
-			table.insert(runningConnections, v.Played:Connect(function()
-				addLog(v.SoundId ~= "" and v.SoundId or v.Name)
-			end))
-		end
-	end
-	table.insert(runningConnections, workspace.DescendantAdded:Connect(function(desc)
-		if desc:IsA("Sound") then
-			table.insert(runningConnections, desc.Played:Connect(function()
-				addLog(desc.SoundId ~= "" and desc.SoundId or desc.Name)
-			end))
-		end
-	end))
-end
-
-local function startAnimationLogger()
-	contentHolder.Visible = true
-	currentMode = "animation"
-	showNotification()
-	local function hookHumanoid(hum)
-		table.insert(runningConnections, hum.AnimationPlayed:Connect(function(track)
-			addLog(track.Animation and track.Animation.AnimationId or "Unknown Animation")
-		end))
-	end
-	for _,plr in pairs(Players:GetPlayers()) do
-		if plr.Character then
-			local hum = plr.Character:FindFirstChildOfClass("Humanoid")
-			if hum then hookHumanoid(hum) end
-		end
-		table.insert(runningConnections, plr.CharacterAdded:Connect(function(char)
-			local hum = char:WaitForChild("Humanoid")
-			hookHumanoid(hum)
-		end))
-	end
-	table.insert(runningConnections, Players.PlayerAdded:Connect(function(plr)
-		table.insert(runningConnections, plr.CharacterAdded:Connect(function(char)
-			local hum = char:WaitForChild("Humanoid")
-			hookHumanoid(hum)
-		end))
-	end))
-end
-
-soundBtn.MouseButton1Click:Connect(function()
-	modeSelect.Visible = false
-	startSoundLogger()
-end)
-
-animBtn.MouseButton1Click:Connect(function()
-	modeSelect.Visible = false
-	startAnimationLogger()
-end)
 
 UserInputService.InputBegan:Connect(function(input, gp)
 	if not gp and input.KeyCode == Enum.KeyCode.M and currentMode then
@@ -308,14 +321,35 @@ UserInputService.InputBegan:Connect(function(input, gp)
 	end
 end)
 
-local function main()
-	Tween(frame, 0.9, {Size = UDim2.new(0,820,0,560), BackgroundTransparency = 0})
-	task.wait(0.3)
-	Tween(madeBy, 1, {TextTransparency = 0})
-	task.wait(2)
-	Tween(madeBy, 1, {TextTransparency = 1})
-	task.wait(0.5)
-	modeSelect.Visible = true
-end
+soundBtn.MouseButton1Click:Connect(function()
+	currentMode = "Sound"
+	modeSelect.Visible = false
+	contentHolder.Visible = true
+	showNotification("Press M to back to menu")
+end)
 
-main()
+animBtn.MouseButton1Click:Connect(function()
+	currentMode = "Animation"
+	modeSelect.Visible = false
+	contentHolder.Visible = true
+	showNotification("Press M to back to menu")
+
+	local character = Player.Character or Player.CharacterAdded:Wait()
+	local humanoid = character:WaitForChild("Humanoid")
+
+	local tracks = humanoid:GetPlayingAnimationTracks()
+	for _,track in pairs(tracks) do
+		addLog(track.Animation and getFullPath(track.Animation) or "Unknown Animation")
+	end
+
+	connections[#connections+1] = humanoid.AnimationPlayed:Connect(function(track)
+		addLog(track.Animation and getFullPath(track.Animation) or "Unknown Animation")
+	end)
+end)
+
+-- Animacje intro
+animateIntro()
+animateLoading()
+animateComplete()
+animateMadeBy()
+modeSelect.Visible = true
